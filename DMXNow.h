@@ -10,13 +10,13 @@ typedef union {
 
 const dmxnow_magic_t dmxnow_magic = {0x44, 0x6D, 0x58, 0x4E};
 
-typedef enum dmxnow_flag_t {
+enum class dmxnow_flag_t : uint8_t {
   DMXNOW_FLAG_NONE          = 0x00,
   DMXNOW_FLAG_RESET         = 0x01,
   DMXNOW_FLAG_NEW           = 0x02,
   DMXNOW_FLAG_FIRST         = 0x04,
   DMXNOW_FLAG_LAST          = 0x08
-} dmxnow_flags;
+};
 
 typedef struct {
     dmxnow_magic_t magic;      // "DmXN"
