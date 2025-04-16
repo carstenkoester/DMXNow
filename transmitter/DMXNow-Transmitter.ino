@@ -78,10 +78,7 @@ public:
       log_e("Failed to broadcast message");
       msg_fail++;
       return false;
-    } else {
-      Serial.printf("sent %d bytes message\n", len);
     }
-
     msg_sent++;
     return true;
   }
@@ -118,7 +115,7 @@ void broadcastDmx(bool updated)
   dmxnow.sequence = dmxnow_sequence++;
   dmxnow.flags = dmxnow_flag_t::DMXNOW_FLAG_NONE;
   dmxnow.offset = 0;
-  dmxnow.length = 512;
+  dmxnow.length = 513;
   dmxnow.payload[0] = 0x00; // Start code
   memcpy(&dmxnow.payload[1], dmx, 512);
   broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+513);
