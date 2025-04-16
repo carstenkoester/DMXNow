@@ -7,6 +7,13 @@ DMX transmission using the ESP8266/ESP32 [ESP-Now](https://www.espressif.com/en/
 
 ## Packet format
 
+TODO - Update for ESP-NOW V2 with larger payload:
+
+  - https://github.com/espressif/esp-now/blob/master/User_Guide.md
+  - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_now.html#frame-format
+
+This spec now requires v2.
+
 ESP-Now supports a maximum of 250-byte payload, therefore we need to split a 512-byte DMX payload into a maximum of three frames.
 
 This protocol is designed to be able to carry an entire payload, but at the same time, flexible enough to carry only a subset of the payload (ie. a smaller number of DMX slots) if desired.
@@ -19,12 +26,11 @@ This protocol is designed to be able to carry an entire payload, but at the same
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |     Version     |   Priority   |        DMX Universe ID       |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                                 |               | | | |L|F|N|R|
-   |         Sequence Number         |     Type      | | | |S|S|E|S|
-   |                                 |               | | | |T|T|W|T|
+   |                               |                 | | | | | |N|R|
+   |         Sequence Number       |      Type       | | | | | |E|S|
+   |                               |                 | | | | | |W|T|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | Expected|Segment|    Length     |             Offset          |
-   | Segments|  ID   |               |                             |
+   |            Offset             |            Length             |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                   Payload (max. 234 bytes)                    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -72,53 +78,18 @@ Potential future uses could be other packet types for universe discovery, synchr
 
   - `NEW`, 0x02: New payload. A receiver MUST set this bit to 1 if the contents of the DMX buffer differ from a previous transmission for this same universe and segment, or if it is unknown (ie. if the transmitter did not compare or analyze whether the payload differs from a previous transmission). A transmitter MAY set this bit to 0 if this is a periodic re-transmission of a previously sent payload. A receiver MAY chose to ignore processing of a packet that has the `NEW` bit set to 0.
 
-  - `FST` (`FIRST`), 0x04: This is the first transmission in a series of segmented DMX payload. In other words, this transmission is the first segment of any one segmented DMX payload.
 
-  - `LST` (`LAST`), 0x08: This is the last transmission in a series of segmented DMX payload. In other words, this transmission is the last segment of any one segmented DMX payload. If a transmitter opts to transmit only a subset of a DMX universe, up to 234 slots, then segmentation may not be necessary and a packet would have both the `FST` and `LST` bit set.
-
-
-#### Expected segments
-
-For the DMX payload currently being transmitted, the highest segment ID expected for a complete DMX buffer, as zero-based number.
-
-Assuming the sender is transmitting an entire DMX buffer of 513 bytes (start code + 512 slots), at the maximum size considering ESP-Now's 250-byte limit (and for this protocol, accounting for overhead, a maximum payload size of 234 bytes), then any one DMX buffer would be split into three segments. As the segment IDs are zero-based, the expected segment IDs would be 0x0, 0x1, 0x2, with 0x2 being the expected highest segment ID.
-
-This field MUST be the same value for all segments that are part of the same DMX buffer. For example, if the transmitter does segment a 512-byte payload into three segments, then this field must have value 0x2 for *all* three segments.
-
-
-#### Segment ID
-
-For the DMX payload currently being transmitted, this is the segment ID of the current transmission.
-
-The Segment ID MUST be reset to zero when the `FST` bit is set on a packet.
-
-The Segment ID MUST be identical to the "Expected segments" value when the `LST` bit is set on a packet.
-
-
-
-#### Length
-
-The number of bytes of DMX payload
 
 #### Offset
 
-For the current segment, the offset into the DMX buffer including the start code.
+The offset into the DMX buffer including the start code.
 
-Assuming a 513-byte DMX buffer (start code + 512 slots), and assuming a source splits this buffer into three equal-size segments of 171 bytes each, then a transmitter could typically chose to transmit three segments as follows:
+For a full buffer transmission, this value would be zero.
 
-| Segment ID | FST | LST | Offset | Length | Remarks                          |
-|------------|-----|-----|--------|--------|----------------------------------|
-| 0          |  X  |     | 0      | 171    | DMX Start code + DMX slots 1-170 |
-| 1          |     |     | 171    | 171    | DMX slots 171-341                |
-| 2          |     |  X  | 342    | 171    | DMX slots 342-512                |
+#### Length
 
-However, to optimize for aligning with the processor's native 32-bit boundary, a transmitter MAY also chose something like
+The number of bytes of DMX payload. The maximum size is 513 bytes for a full buffer of start code followed by 512 DMX slots.
 
-| Segment ID | FST | LST | Offset | Length | Remarks                          |
-|------------|-----|-----|--------|--------|----------------------------------|
-| 0          |  X  |     | 0      | 172    | DMX Start code + DMX slots 1-171 |
-| 1          |     |     | 172    | 172    | DMX slots 172-343                |
-| 2          |     |  X  | 344    | 169    | DMX slots 344-512                |
 
 ### Receiver
 

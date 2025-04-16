@@ -14,9 +14,9 @@ enum class dmxnow_flag_t : uint8_t {
   DMXNOW_FLAG_NONE          = 0x00,
   DMXNOW_FLAG_RESET         = 0x01,
   DMXNOW_FLAG_NEW           = 0x02,
-  DMXNOW_FLAG_FIRST         = 0x04,
-  DMXNOW_FLAG_LAST          = 0x08
 };
+
+inline dmxnow_flag_t operator&(dmxnow_flag_t lhs, dmxnow_flag_t rhs) { return static_cast<dmxnow_flag_t> (static_cast<uint8_t>(lhs) & static_cast<uint8_t>(rhs)); };
 
 typedef struct {
     dmxnow_magic_t magic;      // "DmXN"
@@ -26,11 +26,10 @@ typedef struct {
     uint16_t sequence;
     uint8_t type;
     dmxnow_flag_t flags;
-    uint8_t segments;          // 4-bit "expected segments"; 4-bit "segment ID"
-    uint8_t length;
     uint16_t offset;
+    uint16_t length;
 
-    uint8_t payload[234];
+    uint8_t payload[513];
 } dmxnow_packet_t;
 
 #endif

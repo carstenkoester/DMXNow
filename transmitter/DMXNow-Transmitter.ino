@@ -39,11 +39,11 @@ unsigned long last_sent_millis = 0;
 // Creating a new class that inherits from the ESP_NOW_Peer class is required.
 
 esp_now_rate_config_t rate_config = {
-                .phymode = WIFI_PHY_MODE_HT20,    
-                .rate = WIFI_PHY_RATE_MCS1_SGI,     
-                .ersu = false,                     
-                .dcm = false                       
-            };
+  .phymode = WIFI_PHY_MODE_HT20,
+  .rate = WIFI_PHY_RATE_MCS1_SGI,
+  .ersu = false,
+  .dcm = false
+};
 
 
 class ESP_NOW_Broadcast_Peer : public ESP_NOW_Peer {
