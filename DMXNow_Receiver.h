@@ -5,7 +5,8 @@
 #include "DMXNow.h"
 #include "ESP32_NOW.h"
 
-#include <esp_mac.h>  // For the MAC2STR and MACSTR macros
+// #include <esp_mac.h>  // For the MAC2STR and MACSTR macros
+#include <esp_task_wdt.h>
 #include <vector>
 
 #define DMX_BUFSIZE                   512   // Total number of slots in a DMX universe
@@ -15,12 +16,8 @@ class DMXNow_Receiver
   class ESP_NOW_Peer_Class : public ESP_NOW_Peer {
     public:
       // Constructor of the class
-      ESP_NOW_Peer_Class(const uint8_t *mac_addr, uint8_t channel, wifi_interface_t iface, const uint8_t *lmk, uint8_t* dmxBuffer) : ESP_NOW_Peer(mac_addr, channel, iface, lmk)
-      {
-        _dmxBuffer = dmxBuffer;
-      }
-      
-      ~ESP_NOW_Peer_Class() {}
+      ESP_NOW_Peer_Class(const uint8_t *mac_addr, uint8_t channel, wifi_interface_t iface, const uint8_t *lmk, uint8_t* dmxBuffer);    
+//      ~ESP_NOW_Peer_Class() {}
       
       bool add_peer();
       void onReceive(const uint8_t *data, size_t len, bool broadcast);
@@ -59,6 +56,7 @@ class DMXNow_Receiver
     static unsigned int _rxSeqErrors; // Number of times we detected a gap in sequence numbers
 
     static uint16_t _last_sequence_number;
+    static esp_task_wdt_user_handle_t wdt_handle;
 
     int _statusLEDPin;
 };

@@ -86,7 +86,7 @@ public:
 
 
 // Create a broadcast peer object
-ESP_NOW_Broadcast_Peer broadcast_peer(ESPNOW_WIFI_CHANNEL, WIFI_IF_STA, NULL);
+// ESP_NOW_Broadcast_Peer broadcast_peer(ESPNOW_WIFI_CHANNEL, WIFI_IF_STA, NULL);
 
 uint8_t mac[] = {0x90, 0xA2, 0xDA, 0x10, 0x14, 0x48}; // MAC Adress of your device
 
@@ -118,7 +118,9 @@ void broadcastDmx(bool updated)
   dmxnow.length = 513;
   dmxnow.payload[0] = 0x00; // Start code
   memcpy(&dmxnow.payload[1], dmx, 512);
-  broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+513);
+
+  esp_now_send(ESP_NOW.BROADCAST_ADDR, (uint8_t *) &dmxnow, DMXNOW_HEADER_SIZE+513)
+//  broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+513);
 
 
   // Keep timestamp of when we sent this
@@ -193,12 +195,12 @@ void setup() {
   Serial.printf("  Channel: %d\n", ESPNOW_WIFI_CHANNEL);
 
   // Register the broadcast peer
-  if (!broadcast_peer.begin()) {
-    Serial.println("Failed to initialize broadcast peer");
-    Serial.println("Reebooting in 5 seconds...");
-    delay(5000);
-    ESP.restart();
-  }
+//  if (!broadcast_peer.begin()) {
+//    Serial.println("Failed to initialize broadcast peer");
+//    Serial.println("Reebooting in 5 seconds...");
+//    delay(5000);
+//    ESP.restart();
+//  }
 
 	recv.callbackDMX(receiveDmx);
 	recv.callbackSource(newSource);

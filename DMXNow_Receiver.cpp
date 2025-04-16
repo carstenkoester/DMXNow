@@ -11,6 +11,7 @@
 
 unsigned char DMXNow_Receiver::wifiChannel = 1;
 std::vector<DMXNow_Receiver::ESP_NOW_Peer_Class> DMXNow_Receiver::_peers;
+esp_task_wdt_user_handle_t DMXNow_Receiver::wdt_handle;
 
 unsigned int DMXNow_Receiver::_rxCount = 0;
 unsigned int DMXNow_Receiver::_rxSeqErrors = 0;
@@ -33,40 +34,6 @@ void debugDumpPacket(const void* data, const unsigned int len) {
     }
     Serial.printf("\n");
   }
-
-void DMXNow_Receiver::ESP_NOW_Peer_Class::onReceive(const uint8_t *data, size_t len, bool broadcast) {
-  dmxnow_packet_t* dmxnow;
-
-  dmxnow = (dmxnow_packet_t *) data;
-
-  Serial.printf("Received a message from master " MACSTR " (%s)\n", MAC2STR(addr()), broadcast ? "broadcast" : "unicast");
-  Serial.printf("univ %d seq %d len %d minus hdr %d payload len %d\n", dmxnow->universe, dmxnow->sequence, len, len-16, dmxnow->length);
-
-  // if dmxnow->length >= len-DMXNOW_HEADER_SIZE...
-  // magic number
-  // ...
-  if (dmxnow->sequence != _last_sequence_number + 1) {
-    _rxSeqErrors++;
-  }
-
-  debugDumpPacket(dmxnow, len);
-
-  memcpy(_dmxBuffer+dmxnow->offset, dmxnow->payload+1, dmxnow->length-1);
-  _rxCount++;
-  _last_sequence_number = dmxnow->sequence;
-
-  debugDumpPacket(_dmxBuffer, 512);
-  Serial.printf("Dump done...\n");
-}
-
-bool DMXNow_Receiver::ESP_NOW_Peer_Class::add_peer()
-{
-  if (!add()) {
-    log_e("Failed to register the broadcast peer");
-    return false;
-  }
-  return true;
-}
 
 void DMXNow_Receiver::_register_new_peer(const esp_now_recv_info_t *info, const uint8_t *data, int len, void *arg)
 {
@@ -148,5 +115,4 @@ void DMXNow_Receiver::begin(uint8_t channel)
   memset(&dmxBuffer, 0x00, sizeof(dmxBuffer)); // Clear DMX buffer
 
 //  esp_task_wdt_add(_dmxReceiveTask);
-//  esp_err_t esp_task_wdt_add_user(const char *user_name, esp_task_wdt_user_handle_t *user_handle_ret)
 }
