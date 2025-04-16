@@ -22,7 +22,24 @@ esp_now_rate_config_t rate_config = {
   .ersu = false,                     
   .dcm = false                       
 };
+
+void debugDumpPacket(const void* data, const unsigned int len) {
+    const unsigned char* buf = (const unsigned char*) data;
   
+    Serial.printf("PKT len %d:", len);
+    for (int i=0; i<len; i++) {
+      if (!((i)%32)) {
+        Serial.printf("\n%04x:", i);
+      }
+  
+      if (!((i)%8)) {
+        Serial.printf(" ");
+      }
+  
+      Serial.printf(" %02x", buf[i]);
+    }
+    Serial.printf("\n");
+  }
 
 void DMXNow_Receiver::ESP_NOW_Peer_Class::onReceive(const uint8_t *data, size_t len, bool broadcast) {
   dmxnow_packet_t* dmxnow;
@@ -30,22 +47,23 @@ void DMXNow_Receiver::ESP_NOW_Peer_Class::onReceive(const uint8_t *data, size_t 
   dmxnow = (dmxnow_packet_t *) data;
 
   Serial.printf("Received a message from master " MACSTR " (%s)\n", MAC2STR(addr()), broadcast ? "broadcast" : "unicast");
-  Serial.printf("univ %d seq %d seg 0x%02x len %d minus hdr %d\n", dmxnow->universe, dmxnow->sequence, dmxnow->segments, len, len-16);
+  Serial.printf("univ %d seq %d len %d minus hdr %d payload len %d\n", dmxnow->universe, dmxnow->sequence, len, len-16, dmxnow->length);
 
+  // if dmxnow->length >= len-16...
+  // magic number
+  // ...
   if (dmxnow->sequence != _last_sequence_number + 1) {
     _rxSeqErrors++;
   }
 
-/*
-  if ((dmxnow->flags & dmxnow_flag_t::DMXNOW_FLAG_FIRST) == dmxnow_flag_t::DMXNOW_FLAG_FIRST) {
-    memcpy(_dmxBuffer, (dmxnow->payload)+1, dmxnow->length-1); // Don't copy the start code
-  } else {
-    memcpy(_dmxBuffer+dmxnow->offset-1, dmxnow->payload, dmxnow->length); // Offset -1 to adjust for the start code
-  }
-*/
-  memcpy(_dmxBuffer, (dmxnow->payload)+1, len-16);
+  debugDumpPacket(dmxnow, len);
+
+  memcpy(_dmxBuffer+dmxnow->offset, dmxnow->payload+1, dmxnow->length-1);
   _rxCount++;
   _last_sequence_number = dmxnow->sequence;
+
+  debugDumpPacket(_dmxBuffer, 512);
+  Serial.printf("Dump done...\n");
 }
 
 bool DMXNow_Receiver::ESP_NOW_Peer_Class::add_peer()
