@@ -16,13 +16,6 @@ unsigned int DMXNow_Receiver::_rxCount = 0;
 unsigned int DMXNow_Receiver::_rxSeqErrors = 0;
 uint16_t DMXNow_Receiver::_last_sequence_number = 0;
 
-esp_now_rate_config_t rate_config = {
-  .phymode = WIFI_PHY_MODE_HT20,    
-  .rate = WIFI_PHY_RATE_MCS1_SGI,     
-  .ersu = false,                     
-  .dcm = false                       
-};
-
 void debugDumpPacket(const void* data, const unsigned int len) {
     const unsigned char* buf = (const unsigned char*) data;
   
@@ -49,7 +42,7 @@ void DMXNow_Receiver::ESP_NOW_Peer_Class::onReceive(const uint8_t *data, size_t 
   Serial.printf("Received a message from master " MACSTR " (%s)\n", MAC2STR(addr()), broadcast ? "broadcast" : "unicast");
   Serial.printf("univ %d seq %d len %d minus hdr %d payload len %d\n", dmxnow->universe, dmxnow->sequence, len, len-16, dmxnow->length);
 
-  // if dmxnow->length >= len-16...
+  // if dmxnow->length >= len-DMXNOW_HEADER_SIZE...
   // magic number
   // ...
   if (dmxnow->sequence != _last_sequence_number + 1) {
@@ -88,7 +81,7 @@ void DMXNow_Receiver::_register_new_peer(const esp_now_recv_info_t *info, const 
       Serial.println("Failed to register the new peer");
       return;
     }
-    esp_err_t r =  esp_now_set_peer_rate_config(info->src_addr, &rate_config);
+    esp_err_t r =  esp_now_set_peer_rate_config(info->src_addr, &dmxnow_rate_config);
     if (r != ESP_OK) {
       Serial.printf("Failed to set ESP-Now rate: %d\n", r);
       return;

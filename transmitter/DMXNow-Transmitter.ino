@@ -32,19 +32,7 @@ unsigned long last_sent_millis = 0;
 
 /* Definitions */
 
-#define ESPNOW_WIFI_CHANNEL 6
-
-/* Classes */
-
-// Creating a new class that inherits from the ESP_NOW_Peer class is required.
-
-esp_now_rate_config_t rate_config = {
-  .phymode = WIFI_PHY_MODE_HT20,
-  .rate = WIFI_PHY_RATE_MCS1_SGI,
-  .ersu = false,
-  .dcm = false
-};
-
+#define ESPNOW_WIFI_CHANNEL 11
 
 class ESP_NOW_Broadcast_Peer : public ESP_NOW_Peer {
 public:
@@ -62,7 +50,7 @@ public:
       log_e("Failed to initialize ESP-NOW or register the broadcast peer");
       return false;
     }
-    esp_err_t r =  esp_now_set_peer_rate_config(ESP_NOW.BROADCAST_ADDR, &rate_config);
+    esp_err_t r =  esp_now_set_peer_rate_config(ESP_NOW.BROADCAST_ADDR, &dmxnow_rate_config);
       if (r != ESP_OK) {
         Serial.printf("Failed to set ESP-Now rate: %d\n", r);
         Serial.println("Rebooting in 5 seconds...");
@@ -71,6 +59,14 @@ public:
     } else {
       Serial.println("Rate config set OK");
     }
+    uint32_t espver;
+    esp_err_t r2 =  esp_now_get_version(&espver);
+    if (r2 != ESP_OK) {
+      Serial.printf("Failed to get ESP-Now version: %d\n", r2);
+    } else {
+      Serial.printf("ESP-Now version %d\n", espver);
+    }
+
     return true;
   }
 
@@ -82,6 +78,8 @@ public:
       log_e("Failed to broadcast message");
       msg_fail++;
       return false;
+    } else {
+      Serial.printf("sent %d bytes message\n", len);
     }
 
     msg_sent++;
@@ -100,24 +98,6 @@ uint8_t mac[] = {0x90, 0xA2, 0xDA, 0x10, 0x14, 0x48}; // MAC Adress of your devi
 EthernetUDP sacn;
 Receiver recv(sacn); // universe 1
 
-void debugDumpPacket(const void* data, const unsigned int len) {
-  const unsigned char* buf = (const unsigned char*) data;
-
-  Serial.printf("PKT len %d:", len);
-  for (int i=0; i<len; i++) {
-    if (!((i)%32)) {
-      Serial.printf("\n%04x:", i);
-    }
-
-    if (!((i)%8)) {
-      Serial.printf(" ");
-    }
-
-    Serial.printf(" %02x", buf[i]);
-  }
-  Serial.printf("\n");
-}
-
 void receiveDmx() {
   broadcastDmx(true);
 }
@@ -135,32 +115,14 @@ void broadcastDmx(bool updated)
   dmxnow.universe = 6; // FIXME
   dmxnow.type = 0;
 
-  // First segment
-  dmxnow.sequence = dmxnow_sequence++;
-  dmxnow.flags = dmxnow_flag_t::DMXNOW_FLAG_FIRST;
-  dmxnow.segments = (2 << 4);
-  dmxnow.length = 172;
-  dmxnow.offset = 0;
-  dmxnow.payload[0] = 0x00; // Start code
-  memcpy(&dmxnow.payload[1], dmx, 171);
-  broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+172);
-
-  // Second segment
   dmxnow.sequence = dmxnow_sequence++;
   dmxnow.flags = dmxnow_flag_t::DMXNOW_FLAG_NONE;
-  dmxnow.segments = (2 << 4) + 1;
-  dmxnow.offset = 172;
-  memcpy(&dmxnow.payload, (dmx + 171), 172);
-  broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+172);
+  dmxnow.offset = 0;
+  dmxnow.length = 512;
+  dmxnow.payload[0] = 0x00; // Start code
+  memcpy(&dmxnow.payload[1], dmx, 512);
+  broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+513);
 
-  // Third segment
-  dmxnow.sequence = dmxnow_sequence++;
-  dmxnow.flags = dmxnow_flag_t::DMXNOW_FLAG_LAST;
-  dmxnow.segments = (2 << 4) + 2;
-  dmxnow.length = 169;
-  dmxnow.offset = 344;
-  memcpy(&dmxnow.payload, (dmx + 343), 169);
-  broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+169);
 
   // Keep timestamp of when we sent this
   last_sent_millis = millis();

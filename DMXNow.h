@@ -1,7 +1,11 @@
 #ifndef DMXNow_h
 #define DMXNow_h
 
+#include "ESP32_NOW.h"
+
 #define DMXNOW_HEADER_SIZE 16
+
+extern esp_now_rate_config_t dmxnow_rate_config;
 
 typedef union {
   uint8_t magic_char[4];
