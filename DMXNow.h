@@ -27,8 +27,8 @@ typedef struct {
     uint8_t type;
     dmxnow_flag_t flags;
     uint8_t segments;          // 4-bit "expected segments"; 4-bit "segment ID"
-    uint16_t offset;
     uint8_t length;
+    uint16_t offset;
 
     uint8_t payload[234];
 } dmxnow_packet_t;

@@ -5,7 +5,6 @@
 DMX transmission using the ESP8266/ESP32 [ESP-Now](https://www.espressif.com/en/solutions/low-power-solutions/esp-now) protocol
 
 
-
 ## Packet format
 
 ESP-Now supports a maximum of 250-byte payload, therefore we need to split a 512-byte DMX payload into a maximum of three frames.
@@ -24,8 +23,8 @@ This protocol is designed to be able to carry an entire payload, but at the same
    |         Sequence Number         |     Type      | | | |S|S|E|S|
    |                                 |               | | | |T|T|W|T|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | Expected|Segment|             Offset            |   Length    |
-   | Segments|  ID   |                               |             |
+   | Expected|Segment|    Length     |             Offset          |
+   | Segments|  ID   |               |                             |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                   Payload (max. 234 bytes)                    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -96,13 +95,14 @@ The Segment ID MUST be reset to zero when the `FST` bit is set on a packet.
 The Segment ID MUST be identical to the "Expected segments" value when the `LST` bit is set on a packet.
 
 
-#### Offset
-
-For the current segment, the offset into the DMX buffer including the start code.
 
 #### Length
 
 The number of bytes of DMX payload
+
+#### Offset
+
+For the current segment, the offset into the DMX buffer including the start code.
 
 Assuming a 513-byte DMX buffer (start code + 512 slots), and assuming a source splits this buffer into three equal-size segments of 171 bytes each, then a transmitter could typically chose to transmit three segments as follows:
 
