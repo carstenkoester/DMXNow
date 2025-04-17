@@ -9,13 +9,20 @@
 
 #include "WiFi.h"
 
+/*
+ * Static members
+ */
 unsigned char DMXNow_Receiver::wifiChannel = 1;
 std::vector<DMXNow_Receiver::ESP_NOW_Peer_Class> DMXNow_Receiver::_peers;
 esp_task_wdt_user_handle_t DMXNow_Receiver::wdt_handle;
+void (*DMXNow_Receiver::_receiveCallback)() = nullptr;
 
 unsigned int DMXNow_Receiver::_rxCount = 0;
+unsigned int DMXNow_Receiver::_rxInvalid = 0;
+unsigned int DMXNow_Receiver::_rxOverruns = 0;
 unsigned int DMXNow_Receiver::_rxSeqErrors = 0;
 uint16_t DMXNow_Receiver::_last_sequence_number = 0;
+
 
 void debugDumpPacket(const void* data, const unsigned int len) {
     const unsigned char* buf = (const unsigned char*) data;
@@ -52,31 +59,28 @@ void DMXNow_Receiver::_register_new_peer(const esp_now_recv_info_t *info, const 
     if (r != ESP_OK) {
       Serial.printf("Failed to set ESP-Now rate: %d\n", r);
       return;
-    } else {
-      Serial.println("Rate config set OK");
     }
+
+    // new_peer.setReceiveCallback(_receiveCallback);
   } else {
-    // The slave will only receive broadcast messages
+    // The receiver will only process broadcast messages
     Serial.printf("Received a unicast message from " MACSTR, MAC2STR(info->src_addr));
     Serial.printf("Igorning the message");
   }
-  uint32_t espver;
-  esp_err_t r2 = esp_now_get_version(&espver);
-  if (r2 != ESP_OK) {
-    Serial.printf("Failed to get ESP-Now version: %d\n", r2);
-  } else {
-    Serial.printf("ESP-Now version: %d\n", espver);
-  }
-
 }
 
-DMXNow_Receiver::DMXNow_Receiver(int statusLEDPin)
+DMXNow_Receiver::DMXNow_Receiver()
 {
-  _statusLEDPin = statusLEDPin;
 }
 
-void DMXNow_Receiver::begin(uint8_t channel)
+void DMXNow_Receiver::begin(uint8_t channel, void (*receiveCallback)())
 {
+  uint32_t esp_now_version;
+
+  // Callback
+  _receiveCallback = receiveCallback;
+
+  // WiFi
   wifiChannel = channel;
   WiFi.mode(WIFI_STA);
   WiFi.setChannel(wifiChannel);
@@ -100,7 +104,7 @@ void DMXNow_Receiver::begin(uint8_t channel)
   Serial.printf("  MAC Address: %s\n", WiFi.macAddress());
   Serial.printf("  Channel: %d\n", wifiChannel);
 
-  // Initialize the ESP-NOW protocol
+  // ESP-Now
   if (!ESP_NOW.begin()) {
     Serial.println("Failed to initialize ESP-NOW");
     Serial.println("Reeboting in 5 seconds...");
@@ -108,11 +112,13 @@ void DMXNow_Receiver::begin(uint8_t channel)
     ESP.restart();
   }
 
+  // Print the ESP-Now version (for debugging purposes)
+  esp_err_t r2 = esp_now_get_version(&esp_now_version);
+  Serial.printf("ESP-Now version: %d\n", esp_now_version);
+
   // Register the new peer callback
   ESP_NOW.onNewPeer(_register_new_peer, &dmxBuffer);
 
   // Clear the DMX buffer
   memset(&dmxBuffer, 0x00, sizeof(dmxBuffer)); // Clear DMX buffer
-
-//  esp_task_wdt_add(_dmxReceiveTask);
 }
