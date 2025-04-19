@@ -5,16 +5,24 @@
 // partition scheme should be "Huge APP (3MB No OTA/1MB SPIFFS)", 
 // and PSRAM should be "OPI PSRAM".
 
+// Wired Ethernet related
 #include "SPI.h"
 #include "Ethernet.h"
+#include "sACN.h"
+
+// WiFi/ESP-Now
 #include "ESP32_NOW.h"
 #include "WiFi.h"
-
-#include "sACN.h"
 #include "DMXNow.h"
+#include <esp_mac.h>                    // For the MAC2STR and MACSTR macros
 
-#include <esp_mac.h>  // For the MAC2STR and MACSTR macros
+// Status LED
+#include <Adafruit_NeoPixel.h>          // For status LED only
 
+
+/*
+ * Definitions
+*/
 #define ETH_MISO_PIN                    12
 #define ETH_MOSI_PIN                    11
 #define ETH_SCLK_PIN                    13
@@ -23,83 +31,67 @@
 #define ETH_RST_PIN                     9
 #define ETH_ADDR                        1
 
+#define ESPNOW_WIFI_CHANNEL             11
+#define NEOPIXEL_STATUS_LED_PIN         21
+
+uint8_t mac[] = {0x90, 0xA2, 0xDA, 0x10, 0x14, 0x48}; // MAC Adress of your device
+
+/*
+ * Runtime
+ */
+
 unsigned long msg_sent = 0;
 unsigned long msg_fail = 0;
-
 uint16_t dmxnow_sequence = 0;
 
 unsigned long last_sent_millis = 0;
 
-/* Definitions */
+Adafruit_NeoPixel status_led = Adafruit_NeoPixel(1, NEOPIXEL_STATUS_LED_PIN, NEO_GRB + NEO_KHZ800);
 
-#define ESPNOW_WIFI_CHANNEL 11
+EthernetUDP sacn;
+Receiver recv(sacn);
+
 
 class ESP_NOW_Broadcast_Peer : public ESP_NOW_Peer {
 public:
-  // Constructor of the class using the broadcast address
   ESP_NOW_Broadcast_Peer(uint8_t channel, wifi_interface_t iface, const uint8_t *lmk) : ESP_NOW_Peer(ESP_NOW.BROADCAST_ADDR, channel, iface, lmk) {}
+  ~ESP_NOW_Broadcast_Peer() { remove(); }
 
-  // Destructor of the class
-  ~ESP_NOW_Broadcast_Peer() {
-    remove();
-  }
-
-  // Function to properly initialize the ESP-NOW and register the broadcast peer
   bool begin() {
+    esp_err_t esp_err;
+    uint32_t espnow_version;
+
     if (!ESP_NOW.begin() || !add()) {
-      log_e("Failed to initialize ESP-NOW or register the broadcast peer");
-      return false;
+      Serial.printf("Failed to initialize ESP-NOW or register the broadcast peer\n");
+      return(false);
     }
-    esp_err_t r =  esp_now_set_peer_rate_config(ESP_NOW.BROADCAST_ADDR, &dmxnow_rate_config);
-      if (r != ESP_OK) {
-        Serial.printf("Failed to set ESP-Now rate: %d\n", r);
-        Serial.println("Rebooting in 5 seconds...");
-        delay(5000);
-        ESP.restart();
-    } else {
-      Serial.println("Rate config set OK");
+
+    esp_err =  esp_now_set_peer_rate_config(ESP_NOW.BROADCAST_ADDR, &dmxnow_rate_config);
+    if (esp_err != ESP_OK) {
+      Serial.printf("Failed to set ESP-Now rate\n");
+      return(false);
     }
-    uint32_t espver;
-    esp_err_t r2 =  esp_now_get_version(&espver);
-    if (r2 != ESP_OK) {
-      Serial.printf("Failed to get ESP-Now version: %d\n", r2);
-    } else {
-      Serial.printf("ESP-Now version %d\n", espver);
-    }
+    esp_now_get_version(&espnow_version);
+    Serial.printf("ESP-Now version %d\n", espnow_version);
 
     return true;
   }
 
-
-
-  // Function to send a message to all devices within the network
   bool send_message(const uint8_t* data, size_t len) {
-    if (!send(data, len)) {
-      log_e("Failed to broadcast message");
-      msg_fail++;
-      return false;
-    }
-    msg_sent++;
-    return true;
+    return (send(data, len));
   }
 };
 
 
 // Create a broadcast peer object
-// ESP_NOW_Broadcast_Peer broadcast_peer(ESPNOW_WIFI_CHANNEL, WIFI_IF_STA, NULL);
-
-uint8_t mac[] = {0x90, 0xA2, 0xDA, 0x10, 0x14, 0x48}; // MAC Adress of your device
+ESP_NOW_Broadcast_Peer broadcast_peer(ESPNOW_WIFI_CHANNEL, WIFI_IF_STA, NULL);
 
 
-
-EthernetUDP sacn;
-Receiver recv(sacn); // universe 1
-
-void receiveDmx() {
-  broadcastDmx(true);
+void receiveSACN() {
+  broadcastDmxNow(true);
 }
 
-void broadcastDmx(bool updated)
+void broadcastDmxNow(bool updated)
 {
   dmxnow_packet_t dmxnow;
   unsigned char* dmx;
@@ -119,12 +111,12 @@ void broadcastDmx(bool updated)
   dmxnow.payload[0] = 0x00; // Start code
   memcpy(&dmxnow.payload[1], dmx, 512);
 
-  esp_now_send(ESP_NOW.BROADCAST_ADDR, (uint8_t *) &dmxnow, DMXNOW_HEADER_SIZE+513)
-//  broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+513);
-
-
-  // Keep timestamp of when we sent this
-  last_sent_millis = millis();
+  if (broadcast_peer.send_message((uint8_t*) &dmxnow, DMXNOW_HEADER_SIZE+513)) {
+    msg_sent++;
+    last_sent_millis = millis();
+  } else {
+    msg_fail++;
+  }
 }
 
 void newSource() {
@@ -145,16 +137,10 @@ unsigned long last_status;
 
 
 void setup() {
-	Serial.begin(9600);
-	delay(2000);
+	Serial.begin(115200);
+	delay(100);
 	Serial.println("Program start");
-#ifdef ETH_POWER_PIN
-  pinMode(ETH_POWER_PIN, OUTPUT);
-  digitalWrite(ETH_POWER_PIN, HIGH);
-#endif
 
-
-//  Ethernet.init(14);
   SPI.begin(ETH_SCLK_PIN, ETH_MISO_PIN, ETH_MOSI_PIN, ETH_CS_PIN);
   Ethernet.init(ETH_CS_PIN);
 
@@ -195,14 +181,14 @@ void setup() {
   Serial.printf("  Channel: %d\n", ESPNOW_WIFI_CHANNEL);
 
   // Register the broadcast peer
-//  if (!broadcast_peer.begin()) {
-//    Serial.println("Failed to initialize broadcast peer");
-//    Serial.println("Reebooting in 5 seconds...");
-//    delay(5000);
-//    ESP.restart();
-//  }
+  if (!broadcast_peer.begin()) {
+    Serial.println("Failed to initialize broadcast peer");
+    Serial.println("Rebooting in 5 seconds...");
+    delay(5000);
+    ESP.restart();
+  }
 
-	recv.callbackDMX(receiveDmx);
+	recv.callbackDMX(receiveSACN);
 	recv.callbackSource(newSource);
 	recv.callbackFramerate(framerate);
 	recv.callbackTimeout(timeOut);
@@ -223,6 +209,6 @@ void loop() {
   }
 
   if (millis() > last_sent_millis+1000) {
-    broadcastDmx(false);
+    broadcastDmxNow(false);
   }
 }
