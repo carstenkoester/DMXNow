@@ -5,6 +5,24 @@
 
 uint16_t DMXNow_Receiver::ESP_NOW_Peer_Class::_expected_sequence = 0;
 
+static void debugDumpPacket(const char* title, const void* data, const unsigned int len) {
+  const unsigned char* buf = (const unsigned char*) data;
+
+  Serial.printf("%s len %d:", title, len);
+  for (int i=0; i<len; i++) {
+    if (!((i)%32)) {
+      Serial.printf("\n%04x:", i);
+    }
+
+    if (!((i)%8)) {
+      Serial.printf(" ");
+    }
+
+    Serial.printf(" %02x", buf[i]);
+  }
+  Serial.printf("\n");
+}
+
 DMXNow_Receiver::ESP_NOW_Peer_Class::ESP_NOW_Peer_Class(const uint8_t *mac_addr, uint8_t channel, wifi_interface_t iface, const uint8_t *lmk, uint8_t* dmxBuffer) : ESP_NOW_Peer(mac_addr, channel, iface, lmk)
 {
   _dmxBuffer = dmxBuffer;
@@ -12,8 +30,9 @@ DMXNow_Receiver::ESP_NOW_Peer_Class::ESP_NOW_Peer_Class(const uint8_t *mac_addr,
 
 void DMXNow_Receiver::ESP_NOW_Peer_Class::onReceive(const uint8_t *data, size_t len, bool broadcast)
 {
-  dmxnow_packet_t* dmxnow;
+  // debugDumpPacket("DMXNOW RX", data, len);
 
+  dmxnow_packet_t* dmxnow;
   dmxnow = (dmxnow_packet_t *) data;
 
   if (dmxnow->magic.magic != dmxnow_magic.magic) {

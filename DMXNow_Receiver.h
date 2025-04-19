@@ -5,9 +5,7 @@
 #include "DMXNow.h"
 #include "ESP32_NOW.h"
 
-// #include <esp_mac.h>  // For the MAC2STR and MACSTR macros
 #include <esp_task_wdt.h>
-#include <vector>
 
 #define DMX_BUFSIZE                   512   // Total number of slots in a DMX universe
 
@@ -25,9 +23,8 @@ class DMXNow_Receiver
     
     private:
       uint8_t* _dmxBuffer;
-//      std::function<void()> _receiveCallback;
       static uint16_t _expected_sequence;
-};
+  };
 
   public:
     DMXNow_Receiver();

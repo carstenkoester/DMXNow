@@ -1,6 +1,6 @@
 /*
-  DMXNow_Receiver.cpp - Library for receiving DMX using a Wireless module
-  Carsten Koester, ckoester@cisco.com, May-2024.
+  DMXNow_Receiver.cpp - Library for receiving DMX using ESP32 ESP-Now
+  Carsten Koester, carsten@ckoester.net, May-2024.
   Released into the public domain.
 */
 
@@ -21,25 +21,6 @@ unsigned int DMXNow_Receiver::_rxCount = 0;
 unsigned int DMXNow_Receiver::_rxInvalid = 0;
 unsigned int DMXNow_Receiver::_rxOverruns = 0;
 unsigned int DMXNow_Receiver::_rxSeqErrors = 0;
-
-
-void debugDumpPacket(const void* data, const unsigned int len) {
-    const unsigned char* buf = (const unsigned char*) data;
-  
-    Serial.printf("PKT len %d:", len);
-    for (int i=0; i<len; i++) {
-      if (!((i)%32)) {
-        Serial.printf("\n%04x:", i);
-      }
-  
-      if (!((i)%8)) {
-        Serial.printf(" ");
-      }
-  
-      Serial.printf(" %02x", buf[i]);
-    }
-    Serial.printf("\n");
-  }
 
 void DMXNow_Receiver::_register_new_peer(const esp_now_recv_info_t *info, const uint8_t *data, int len, void *arg)
 {
