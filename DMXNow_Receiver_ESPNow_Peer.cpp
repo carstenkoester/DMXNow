@@ -50,6 +50,11 @@ void DMXNow_Receiver::ESP_NOW_Peer_Class::onReceive(const uint8_t *data, size_t 
     _rxInvalid++;
     return;
   }
+  if (dmxnow->universe != dmxUniverse) {
+    // Packet received on a different universe
+    _rxWrongUniverse++;
+    return;
+  }
 
   if (dmxnow->sequence != _expected_sequence) {
     _rxSeqErrors++;

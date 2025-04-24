@@ -12,7 +12,9 @@
 /*
  * Static members
  */
-unsigned char DMXNow_Receiver::wifiChannel = 1;
+unsigned char DMXNow_Receiver::wifiChannel;
+uint16_t DMXNow_Receiver::dmxUniverse;
+
 esp_task_wdt_user_handle_t DMXNow_Receiver::wdt_handle;
 void (*DMXNow_Receiver::_receiveCallback)() = nullptr;
 DMXNow_Receiver::ESP_NOW_Peer_Class* DMXNow_Receiver::_peer = nullptr;
@@ -21,6 +23,7 @@ unsigned int DMXNow_Receiver::_rxCount = 0;
 unsigned int DMXNow_Receiver::_rxInvalid = 0;
 unsigned int DMXNow_Receiver::_rxOverruns = 0;
 unsigned int DMXNow_Receiver::_rxSeqErrors = 0;
+unsigned int DMXNow_Receiver::_rxWrongUniverse = 0;
 
 void DMXNow_Receiver::_register_new_peer(const esp_now_recv_info_t *info, const uint8_t *data, int len, void *arg)
 {
@@ -54,7 +57,7 @@ DMXNow_Receiver::DMXNow_Receiver()
 {
 }
 
-void DMXNow_Receiver::begin(uint8_t channel, void (*receiveCallback)())
+void DMXNow_Receiver::begin(uint8_t channel, uint16_t universe, void (*receiveCallback)())
 {
   uint32_t esp_now_version;
 
@@ -101,5 +104,6 @@ void DMXNow_Receiver::begin(uint8_t channel, void (*receiveCallback)())
   ESP_NOW.onNewPeer(_register_new_peer, &dmxBuffer);
 
   // Clear the DMX buffer
+  dmxUniverse = universe;
   memset(&dmxBuffer, 0x00, sizeof(dmxBuffer)); // Clear DMX buffer
 }
