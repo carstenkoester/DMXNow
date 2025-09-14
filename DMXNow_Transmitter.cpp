@@ -54,6 +54,7 @@ void DMXNow_Transmitter::begin(uint8_t channel, uint16_t universe, void (*transm
   }
 
   Serial.printf("DMXNow Transmitter\n");
+  Serial.printf("ESP-NOW version: %d, max data length: %d\n", ESP_NOW.getVersion(), ESP_NOW.getMaxDataLen());
   Serial.printf("Wi-Fi parameters:\n");
   Serial.printf("  Mode: STA\n");
   Serial.printf("  MAC Address: %s\n", WiFi.macAddress());

@@ -31,15 +31,15 @@
 #define ESPNOW_WIFI_CHANNEL             11
 #define NEOPIXEL_STATUS_LED_PIN         21
 
-#define UNIVERSE                        6
-
-uint8_t mac[] = {0x90, 0xA2, 0xDA, 0x10, 0x14, 0x48}; // MAC Adress of your device
+#define UNIVERSE                        15
 
 /*
  * Runtime
  */
 
 // Adafruit_NeoPixel status_led = Adafruit_NeoPixel(1, NEOPIXEL_STATUS_LED_PIN, NEO_GRB + NEO_KHZ800);
+uint8_t mac[6];
+
 DMXNow_Transmitter transmitter;
 unsigned long SACNRxCount = 0;
 
@@ -52,32 +52,36 @@ void receiveSACN() {
 }
 
 void newSource() {
-	Serial.print("new soure name: ");
-	Serial.println(recv.name());
+  Serial.print("new soure name: ");
+  Serial.println(recv.name());
 }
 
 void framerate() {
-//  Serial.print("Framerate fps: ");
-//  Serial.println(recv.framerate());
+  Serial.print("Framerate fps: ");
+  Serial.println(recv.framerate());
 }
 
 void timeOut() {
-	Serial.println("Timeout!");
+  Serial.println("Timeout!");
 }
 
 unsigned long last_status;
 
 void setup() {
-	Serial.begin(115200);
-	delay(100);
-	Serial.println("Program start");
+  Serial.begin(115200);
+  delay(100);
+  Serial.println("Program start");
 
   SPI.begin(ETH_SCLK_PIN, ETH_MISO_PIN, ETH_MOSI_PIN, ETH_CS_PIN);
   Ethernet.init(ETH_CS_PIN);
 
   transmitter.begin(ESPNOW_WIFI_CHANNEL, UNIVERSE);
 
-	Ethernet.begin(mac);
+  // Get the MAC address of the Ethernet interface
+  esp_read_mac(mac, ESP_MAC_ETH);
+  Serial.printf("Ethernet MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+  Ethernet.begin(mac);
 
   // Check for Ethernet hardware present
   if (Ethernet.hardwareStatus() == EthernetNoHardware) {
@@ -85,7 +89,7 @@ void setup() {
     while (true) {
       delay(1); // do nothing, no point running without Ethernet hardware
     }
-	} else if (Ethernet.hardwareStatus() == EthernetW5100) {
+  } else if (Ethernet.hardwareStatus() == EthernetW5100) {
     Serial.println("W5100 Ethernet controller detected.");
   } else if (Ethernet.hardwareStatus() == EthernetW5200) {
     Serial.println("W5200 Ethernet controller detected.");
@@ -100,12 +104,12 @@ void setup() {
   Serial.print("My IP address: ");
   Serial.println(Ethernet.localIP());
 
-	recv.callbackDMX(receiveSACN);
-	recv.callbackSource(newSource);
-	recv.callbackFramerate(framerate);
-	recv.callbackTimeout(timeOut);
-	recv.begin(UNIVERSE);
-	Serial.println("sACN start");
+  recv.callbackDMX(receiveSACN);
+  recv.callbackSource(newSource);
+//  recv.callbackFramerate(framerate);
+  recv.callbackTimeout(timeOut);
+  recv.begin(UNIVERSE);
+  Serial.println("sACN start");
 
   last_status = millis();
 }

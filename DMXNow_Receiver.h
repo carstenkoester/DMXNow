@@ -43,7 +43,6 @@ class DMXNow_Receiver
     unsigned int rxSeqErrors() const { return (_rxSeqErrors); };
     unsigned int rxWrongUniverse() const { return (_rxWrongUniverse); };
 
-
     uint8_t dmxBuffer[DMX_BUFSIZE];
     bool debug;
 

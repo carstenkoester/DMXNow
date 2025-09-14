@@ -4,17 +4,11 @@
 
 DMX transmission using the ESP8266/ESP32 [ESP-Now](https://www.espressif.com/en/solutions/low-power-solutions/esp-now) protocol
 
+This library requires Arduino ESP32 board library v3.3.0 or later in order to support large ESP-NOW v2 packet size (ESP32 [Issue #11261](https://github.com/espressif/arduino-esp32/issues/11261) and [PR #11524](https://github.com/espressif/arduino-esp32/pull/11524>)).
 
 ## Packet format
 
-TODO - Update for ESP-NOW V2 with larger payload:
-
-  - https://github.com/espressif/esp-now/blob/master/User_Guide.md
-  - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_now.html#frame-format
-
-This spec now requires v2.
-
-ESP-Now supports a maximum of 250-byte payload, therefore we need to split a 512-byte DMX payload into a maximum of three frames.
+This library leverages [ESP-Now Version 2.0](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_now.html#frame-format) which supports up to 1470-byte packet size, in order to encapsulate an entire universe of DMX data. Older versions of ESP-Now supported a maximum of 250 bytes and require fragmenting a DMX buffer.
 
 This protocol is designed to be able to carry an entire payload, but at the same time, flexible enough to carry only a subset of the payload (ie. a smaller number of DMX slots) if desired.
 
@@ -32,7 +26,7 @@ This protocol is designed to be able to carry an entire payload, but at the same
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |            Offset             |            Length             |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                   Payload (max. 234 bytes)                    |
+   |                   Payload (max. 513 bytes)                    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
