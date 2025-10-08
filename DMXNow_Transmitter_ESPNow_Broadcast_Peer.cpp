@@ -2,6 +2,7 @@
 #include <esp_task_wdt.h>
 
 #include "WiFi.h"
+#include "esp_wifi.h"
 
 static void debugDumpPacket(const char* title, const void* data, const unsigned int len) {
   const unsigned char* buf = (const unsigned char*) data;
@@ -36,6 +37,7 @@ bool DMXNow_Transmitter::ESP_NOW_Broadcast_Peer_Class::begin()
   esp_err_t esp_err;
   uint32_t espnow_version;
 
+  esp_wifi_set_ps(WIFI_PS_NONE);
   if (!ESP_NOW.begin() || !add()) {
     Serial.printf("Failed to initialize ESP-NOW or register the broadcast peer\n");
     return(false);

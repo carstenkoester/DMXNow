@@ -8,6 +8,7 @@
 #include <esp_task_wdt.h>
 
 #include "WiFi.h"
+#include "esp_wifi.h"
 
 /*
  * Static members
@@ -60,6 +61,7 @@ DMXNow_Receiver::DMXNow_Receiver()
 void DMXNow_Receiver::begin(uint8_t channel, uint16_t universe, void (*receiveCallback)())
 {
   uint32_t esp_now_version;
+  uint8_t mac[6];
 
   // Callback
   _receiveCallback = receiveCallback;
@@ -82,16 +84,18 @@ void DMXNow_Receiver::begin(uint8_t channel, uint16_t universe, void (*receiveCa
     Serial.printf("\n");
   }
 
+  WiFi.macAddress(mac);
   Serial.printf("DMXNow Receiver\n");
   Serial.printf("Wi-Fi parameters:\n");
   Serial.printf("  Mode: STA\n");
-  Serial.printf("  MAC Address: %s\n", WiFi.macAddress());
+  Serial.printf("  MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   Serial.printf("  Channel: %d\n", wifiChannel);
 
   // ESP-Now
+  esp_wifi_set_ps(WIFI_PS_NONE);
   if (!ESP_NOW.begin()) {
     Serial.println("Failed to initialize ESP-NOW");
-    Serial.println("Reeboting in 5 seconds...");
+    Serial.println("Reboting in 5 seconds...");
     delay(5000);
     ESP.restart();
   }

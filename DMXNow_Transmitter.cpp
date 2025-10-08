@@ -9,7 +9,6 @@
 
 #include "WiFi.h"
 
-
 /*
  * Static members
  */
@@ -29,6 +28,8 @@ DMXNow_Transmitter::DMXNow_Transmitter()
 
 void DMXNow_Transmitter::begin(uint8_t channel, uint16_t universe, void (*transmitCallback)())
 {
+  uint8_t mac[6];
+
   // Callback
   _transmitCallback = transmitCallback;
 
@@ -53,11 +54,11 @@ void DMXNow_Transmitter::begin(uint8_t channel, uint16_t universe, void (*transm
     Serial.printf("\n");
   }
 
+  WiFi.macAddress(mac);
   Serial.printf("DMXNow Transmitter\n");
-  Serial.printf("ESP-NOW version: %d, max data length: %d\n", ESP_NOW.getVersion(), ESP_NOW.getMaxDataLen());
   Serial.printf("Wi-Fi parameters:\n");
   Serial.printf("  Mode: STA\n");
-  Serial.printf("  MAC Address: %s\n", WiFi.macAddress());
+  Serial.printf("  MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   Serial.printf("  Channel: %d\n", wifiChannel);
 
   // Register the broadcast peer
@@ -162,7 +163,7 @@ void DMXNow_Transmitter::_startDMXTransmitThread(void* _this)
 void DMXNow_Transmitter::_dmxTransmitLoop()
 {
   while (true) {
-    if (millis() >= _txMillis + 1000) {
+    if (millis() >= _txMillis + 250) {
       _transmit(false);
     }
   }
